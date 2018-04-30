@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+  <title>-frame detaches on attribute change</title>
+  <link rel="author" title="Ehsan Karamad" href="ekaramad@chromium.org">
+  <script src="/resources/testharness.js"></script>
+  <script src="/resources/testharnessreport.js"></script>
+</head>
+<body>
+  <script>
+    function navigateElementAndWait(element, urlAttribute, url) {
+      return new Promise( (resolve) => {
+        element.addEventListener("load", resolve);
+        element.setAttribute(urlAttribute, url);
+      });
+    }
+
+    promise_test( async() => {
+      let url = "./resources/test_page.html";
+
+      let object = document.createElement("object");
+      object.type = "text/html";
+      document.body.appendChild(object);
+      await navigateElementAndWait(object, "data", url);
+
+      let embed = document.createElement("embed");
+      document.body.appendChild(embed);
+      embed.type = "text/html";
+      await navigateElementAndWait(embed, "src", url);
+
+      let iframe = document.createElement("iframe");
+      document.body.appendChild(iframe);
+      await navigateElementAndWait(iframe, "src", url);
+
+      assert_equals(
+        window.frames[0].frameElement,
+        object,
+        "<object> was attached and navigated first.");
+      assert_equals(
+        window.frames[1].frameElement,
+        embed,
+        "<embed> was attached and navigated second.");
+      assert_equals(
+        window.frames[2].frameElement,
+        iframe,
+        "<iframe> was attached and navigated thrid.");
+
+      // Navigate <object> way and back to the same |url|.
+      await navigateElementAndWait(object, "data", "about:blank");
+      await navigateElementAndWait(object, "data", url);
+
+      assert_equals(
+        window.frames[0].frameElement,
+        embed,
+        "<object>'s frame and window must have been destroyed.");
+
+      assert_equals(
+        window.frames[2].frameElement,
+        object,
+        "The new window for <object> must be added after <iframe>'s.");
+
+      await navigateElementAndWait(embed, "src", "about:blank");
+      await navigateElementAndWait(embed, "src", url);
+
+      assert_equals(
+        window.frames[0].frameElement,
+        iframe,
+        "<embed>'s frame and window must have been destroyed.");
+
+      assert_equals(
+        window.frames[2].frameElement,
+        embed,
+        "<embed>'s new window is appended last.");
+
+      // Navigate the <object> again.
+    }, "Verify that changing the 'data' attribute on <object> element and" +
+    "  'src' attribute on <embed> element will kill the content frame and" +
+    " removes and re-inserts a new window in |window.frames|.");
+  </script>
+</body>
+</html>
