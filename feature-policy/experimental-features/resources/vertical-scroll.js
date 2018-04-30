@@ -28,7 +28,11 @@ function rects_intersect(rect1, rect2) {
 function loadUrlInIframe(iframe, url) {
   return new Promise((resolve) => {
     iframe.addEventListener("load", resolve);
-    iframe.src = url;
+    if (iframe.contentWindow.location.href === url) {
+      iframe.contentWindow.location.reload();
+    } else {
+      iframe.src = url;
+    }
   });
 }
 
